@@ -63,6 +63,12 @@ type LoginRequest struct {
 	TurnstileToken string `json:"turnstile_token"`
 }
 
+// LDAPLoginRequest represents the LDAP login request payload
+type LDAPLoginRequest struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
 // AuthResponse 认证响应格式（匹配前端期望）
 type AuthResponse struct {
 	AccessToken string    `json:"access_token"`
@@ -425,5 +431,27 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 
 	response.Success(c, ResetPasswordResponse{
 		Message: "Your password has been reset successfully. You can now log in with your new password.",
+	})
+}
+
+// LDAPLogin handles LDAP user login
+// POST /api/v1/auth/ldap/login
+func (h *AuthHandler) LDAPLogin(c *gin.Context) {
+	var req LDAPLoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+
+	token, user, err := h.authService.AuthenticateWithLDAP(c.Request.Context(), req.Username, req.Password)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+
+	response.Success(c, AuthResponse{
+		AccessToken: token,
+		TokenType:   "Bearer",
+		User:        dto.UserFromService(user),
 	})
 }
