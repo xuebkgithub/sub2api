@@ -585,7 +585,6 @@ func (s *AuthService) RefreshToken(ctx context.Context, oldTokenString string) (
 	return s.GenerateToken(user)
 }
 
-<<<<<<< HEAD
 // IsPasswordResetEnabled 检查是否启用密码重置功能
 // 要求：必须同时开启邮件验证且 SMTP 配置正确
 func (s *AuthService) IsPasswordResetEnabled(ctx context.Context) bool {
@@ -765,6 +764,7 @@ func (s *AuthService) AuthenticateWithLDAP(ctx context.Context, username, passwo
 		return "", nil, err
 	}
 
+	log.Printf("[Auth] LDAP login successful for user: %s (email: %s)", user.Username, user.Email)
 	return token, user, nil
 }
 
