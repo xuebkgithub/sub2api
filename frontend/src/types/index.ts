@@ -90,6 +90,7 @@ export interface PublicSettings {
   hide_ccs_import_button: boolean
   purchase_subscription_enabled: boolean
   purchase_subscription_url: string
+  ldap_enabled: boolean
   linuxdo_oauth_enabled: boolean
   version: string
 }

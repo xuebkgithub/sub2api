@@ -11,6 +11,9 @@
         </p>
       </div>
 
+      <!-- LDAP 登录 -->
+      <LDAPLoginSection v-if="ldapEnabled" :disabled="isLoading" />
+
       <!-- LinuxDo Connect OAuth 登录 -->
       <LinuxDoOAuthSection v-if="linuxdoOAuthEnabled" :disabled="isLoading" />
 
@@ -180,12 +183,13 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { AuthLayout } from '@/components/layout'
+import LDAPLoginSection from '@/components/auth/LDAPLoginSection.vue'
 import LinuxDoOAuthSection from '@/components/auth/LinuxDoOAuthSection.vue'
 import TotpLoginModal from '@/components/auth/TotpLoginModal.vue'
 import Icon from '@/components/icons/Icon.vue'
 import TurnstileWidget from '@/components/TurnstileWidget.vue'
 import { useAuthStore, useAppStore } from '@/stores'
-import { getPublicSettings, isTotp2FARequired, ldapLogin } from '@/api/auth'
+import { getPublicSettings, isTotp2FARequired } from '@/api/auth'
 import type { TotpLoginResponse } from '@/types'
 
 const { t } = useI18n()
@@ -201,11 +205,11 @@ const appStore = useAppStore()
 const isLoading = ref<boolean>(false)
 const errorMessage = ref<string>('')
 const showPassword = ref<boolean>(false)
-const loginType = ref<'email' | 'ldap'>('email')
 
 // Public settings
 const turnstileEnabled = ref<boolean>(false)
 const turnstileSiteKey = ref<string>('')
+const ldapEnabled = ref<boolean>(false)
 const linuxdoOAuthEnabled = ref<boolean>(false)
 const passwordResetEnabled = ref<boolean>(false)
 
@@ -224,20 +228,10 @@ const formData = reactive({
   password: ''
 })
 
-const ldapFormData = reactive({
-  username: '',
-  password: ''
-})
-
 const errors = reactive({
   email: '',
   password: '',
   turnstile: ''
-})
-
-const ldapErrors = reactive({
-  username: '',
-  password: ''
 })
 
 // ==================== Lifecycle ====================
@@ -255,6 +249,7 @@ onMounted(async () => {
     const settings = await getPublicSettings()
     turnstileEnabled.value = settings.turnstile_enabled
     turnstileSiteKey.value = settings.turnstile_site_key || ''
+    ldapEnabled.value = settings.ldap_enabled
     linuxdoOAuthEnabled.value = settings.linuxdo_oauth_enabled
     passwordResetEnabled.value = settings.password_reset_enabled
   } catch (error) {
@@ -410,66 +405,6 @@ function handle2FACancel(): void {
   show2FAModal.value = false
   totpTempToken.value = ''
   totpUserEmailMasked.value = ''
-}
-
-// ==================== LDAP Login Handler ====================
-
-async function handleLDAPLogin(): Promise<void> {
-  // Clear previous error
-  errorMessage.value = ''
-  ldapErrors.username = ''
-  ldapErrors.password = ''
-
-  // Validate LDAP form
-  let isValid = true
-  if (!ldapFormData.username.trim()) {
-    ldapErrors.username = t('auth.usernameRequired')
-    isValid = false
-  }
-  if (!ldapFormData.password) {
-    ldapErrors.password = t('auth.passwordRequired')
-    isValid = false
-  }
-
-  if (!isValid) {
-    return
-  }
-
-  isLoading.value = true
-
-  try {
-    // Call LDAP login API directly (it already stores token and user)
-    await ldapLogin({
-      username: ldapFormData.username,
-      password: ldapFormData.password
-    })
-
-    // Refresh auth store state from localStorage
-    authStore.checkAuth()
-
-    // Show success toast
-    appStore.showSuccess(t('auth.loginSuccess'))
-
-    // Redirect to dashboard or intended route
-    const redirectTo = (router.currentRoute.value.query.redirect as string) || '/dashboard'
-    await router.push(redirectTo)
-  } catch (error: unknown) {
-    // Handle login error
-    const err = error as { message?: string; response?: { data?: { detail?: string } } }
-
-    if (err.response?.data?.detail) {
-      errorMessage.value = err.response.data.detail
-    } else if (err.message) {
-      errorMessage.value = err.message
-    } else {
-      errorMessage.value = t('auth.ldapLoginFailed')
-    }
-
-    // Also show error toast
-    appStore.showError(errorMessage.value)
-  } finally {
-    isLoading.value = false
-  }
 }
 
 </script>
