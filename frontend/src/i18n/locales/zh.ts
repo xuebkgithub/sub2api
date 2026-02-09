@@ -356,6 +356,18 @@ export default {
       state: '状态',
       fullUrl: '完整URL'
     },
+    ldap: {
+      title: 'LDAP 登录',
+      subtitle: '使用您的 LDAP 凭证登录',
+      username: '用户名',
+      usernamePlaceholder: '用户名',
+      password: '密码',
+      passwordPlaceholder: '密码',
+      signIn: '登录',
+      signingIn: '登录中...',
+      loginFailed: '登录失败，请检查用户名和密码',
+      backToEmailLogin: '返回邮箱登录'
+    },
     // 忘记密码
     forgotPassword: '忘记密码？',
     forgotPasswordTitle: '重置密码',

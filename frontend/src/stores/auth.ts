@@ -220,6 +220,36 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
+   * LDAP 登录
+   * @param username - LDAP 用户名
+   * @param password - LDAP 密码
+   * @param turnstileToken - 可选的 Turnstile 验证令牌
+   * @returns Promise resolving to the authenticated user
+   * @throws Error if LDAP login fails
+   */
+  async function loginLdap(
+    username: string,
+    password: string,
+    turnstileToken?: string
+  ): Promise<User> {
+    try {
+      const response = await authAPI.loginLdap({
+        username,
+        password,
+        turnstile_token: turnstileToken
+      })
+
+      // 复用现有的认证状态设置逻辑
+      setAuthFromResponse(response)
+
+      return user.value!
+    } catch (error) {
+      clearAuth()
+      throw error
+    }
+  }
+
+  /**
    * Set auth state from an AuthResponse
    * Internal helper function
    */
@@ -399,6 +429,7 @@ export const useAuthStore = defineStore('auth', () => {
     // Actions
     login,
     login2FA,
+    loginLdap,
     register,
     setToken,
     logout,

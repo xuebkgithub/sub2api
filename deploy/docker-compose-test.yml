@@ -33,7 +33,7 @@ services:
       # Data persistence (config.yaml will be auto-generated here)
       - sub2api_data:/app/data
       # Mount custom config.yaml (optional, overrides auto-generated config)
-      - ./config.yaml:/app/data/config.yaml:ro
+      # - ./config.yaml:/app/data/config.yaml:ro
     environment:
       # =======================================================================
       # Auto Setup (REQUIRED for Docker deployment)
@@ -103,6 +103,19 @@ services:
       # =======================================================================
       # Allow private IP addresses for CRS sync (for internal deployments)
       - SECURITY_URL_ALLOWLIST_ALLOW_PRIVATE_HOSTS=${SECURITY_URL_ALLOWLIST_ALLOW_PRIVATE_HOSTS:-true}
+
+      # =======================================================================
+      # LDAP Configuration (Optional)
+      # =======================================================================
+      - LDAP_SERVER_URL=${LDAP_SERVER_URL:-}
+      - LDAP_BIND_DN=${LDAP_BIND_DN:-}
+      - LDAP_BIND_PASSWORD=${LDAP_BIND_PASSWORD:-}
+      - LDAP_BASE_DN=${LDAP_BASE_DN:-}
+      - LDAP_USER_FILTER=${LDAP_USER_FILTER:-(uid=%s)}
+      - LDAP_ENABLED=${LDAP_ENABLED:-false}
+      - LDAP_TLS_ENABLED=${LDAP_TLS_ENABLED:-false}
+      - LDAP_TLS_SKIP_VERIFY=${LDAP_TLS_SKIP_VERIFY:-false}
+      - LDAP_ENCRYPTION_KEY=${LDAP_ENCRYPTION_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy

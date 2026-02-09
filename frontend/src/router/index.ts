@@ -44,6 +44,15 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/auth/ldap',
+    name: 'LdapLogin',
+    component: () => import('@/views/auth/LdapLoginView.vue'),
+    meta: {
+      requiresAuth: false,
+      title: 'LDAP Login'
+    }
+  },
+  {
     path: '/register',
     name: 'Register',
     component: () => import('@/views/auth/RegisterView.vue'),

@@ -27,6 +27,12 @@ type ErrorPassthroughRule func(*sql.Selector)
 // Group is the predicate function for group builders.
 type Group func(*sql.Selector)
 
+// LdapConfig is the predicate function for ldapconfig builders.
+type LdapConfig func(*sql.Selector)
+
+// LdapUser is the predicate function for ldapuser builders.
+type LdapUser func(*sql.Selector)
+
 // PromoCode is the predicate function for promocode builders.
 type PromoCode func(*sql.Selector)
 

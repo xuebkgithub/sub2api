@@ -356,6 +356,18 @@ export default {
       state: 'State',
       fullUrl: 'Full URL'
     },
+    ldap: {
+      title: 'LDAP Login',
+      subtitle: 'Sign in with your LDAP credentials',
+      username: 'Username',
+      usernamePlaceholder: 'Username',
+      password: 'Password',
+      passwordPlaceholder: 'Password',
+      signIn: 'Sign In',
+      signingIn: 'Signing in...',
+      loginFailed: 'Login failed, please check your username and password',
+      backToEmailLogin: 'Back to Email Login'
+    },
     // Forgot password
     forgotPassword: 'Forgot password?',
     forgotPasswordTitle: 'Reset Your Password',

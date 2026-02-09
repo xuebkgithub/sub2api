@@ -30,6 +30,7 @@ type AdminHandlers struct {
 // Handlers contains all HTTP handlers
 type Handlers struct {
 	Auth          *AuthHandler
+	LdapAuth      *LdapAuthHandler
 	User          *UserHandler
 	APIKey        *APIKeyHandler
 	Usage         *UsageHandler

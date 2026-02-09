@@ -79,7 +79,18 @@ func provideCleanup(
 	openaiOAuth *service.OpenAIOAuthService,
 	geminiOAuth *service.GeminiOAuthService,
 	antigravityOAuth *service.AntigravityOAuthService,
+	ldapService *service.LdapService,
 ) func() {
+	// Initialize LDAP config from environment variables on startup
+	if ldapService != nil {
+		ctx := context.Background()
+		if err := ldapService.LoadConfigFromEnv(ctx); err != nil {
+			log.Printf("[LDAP] Failed to load config from environment: %v", err)
+		} else {
+			log.Println("[LDAP] Configuration loaded from environment variables")
+		}
+	}
+
 	return func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()

@@ -27,6 +27,7 @@ func RegisterAuthRoutes(
 		auth.POST("/register", h.Auth.Register)
 		auth.POST("/login", h.Auth.Login)
 		auth.POST("/login/2fa", h.Auth.Login2FA)
+		auth.POST("/ldap/login", h.LdapAuth.Login)
 		auth.POST("/send-verify-code", h.Auth.SendVerifyCode)
 		// Token刷新接口添加速率限制：每分钟最多 30 次（Redis 故障时 fail-close）
 		auth.POST("/refresh", rateLimiter.LimitWithOptions("refresh-token", 30, time.Minute, middleware.RateLimitOptions{

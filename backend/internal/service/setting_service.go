@@ -31,17 +31,19 @@ type SettingRepository interface {
 
 // SettingService 系统设置服务
 type SettingService struct {
-	settingRepo SettingRepository
-	cfg         *config.Config
-	onUpdate    func() // Callback when settings are updated (for cache invalidation)
-	version     string // Application version
+	settingRepo     SettingRepository
+	ldapConfigRepo  LdapConfigRepository
+	cfg             *config.Config
+	onUpdate        func() // Callback when settings are updated (for cache invalidation)
+	version         string // Application version
 }
 
 // NewSettingService 创建系统设置服务实例
-func NewSettingService(settingRepo SettingRepository, cfg *config.Config) *SettingService {
+func NewSettingService(settingRepo SettingRepository, ldapConfigRepo LdapConfigRepository, cfg *config.Config) *SettingService {
 	return &SettingService{
-		settingRepo: settingRepo,
-		cfg:         cfg,
+		settingRepo:    settingRepo,
+		ldapConfigRepo: ldapConfigRepo,
+		cfg:            cfg,
 	}
 }
 
@@ -95,6 +97,15 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 	emailVerifyEnabled := settings[SettingKeyEmailVerifyEnabled] == "true"
 	passwordResetEnabled := emailVerifyEnabled && settings[SettingKeyPasswordResetEnabled] == "true"
 
+	// Check if LDAP is enabled by querying ldap_configs table
+	ldapEnabled := false
+	if s.ldapConfigRepo != nil {
+		config, err := s.ldapConfigRepo.GetEnabled(ctx)
+		if err == nil && config != nil {
+			ldapEnabled = true
+		}
+	}
+
 	return &PublicSettings{
 		RegistrationEnabled:         settings[SettingKeyRegistrationEnabled] == "true",
 		EmailVerifyEnabled:          emailVerifyEnabled,
@@ -102,6 +113,7 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		PasswordResetEnabled:        passwordResetEnabled,
 		InvitationCodeEnabled:       settings[SettingKeyInvitationCodeEnabled] == "true",
 		TotpEnabled:                 settings[SettingKeyTotpEnabled] == "true",
+		LdapEnabled:                 ldapEnabled,
 		TurnstileEnabled:            settings[SettingKeyTurnstileEnabled] == "true",
 		TurnstileSiteKey:            settings[SettingKeyTurnstileSiteKey],
 		SiteName:                    s.getStringOrDefault(settings, SettingKeySiteName, "Sub2API"),

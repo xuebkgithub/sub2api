@@ -148,6 +148,27 @@
           {{ isLoading ? t('auth.signingIn') : t('auth.signIn') }}
         </button>
       </form>
+
+      <!-- LDAP 登录入口 -->
+      <div v-if="ldapEnabled" class="mt-6">
+        <div class="relative">
+          <div class="absolute inset-0 flex items-center">
+            <div class="w-full border-t border-gray-300 dark:border-dark-600"></div>
+          </div>
+          <div class="relative flex justify-center text-sm">
+            <span class="px-2 bg-white dark:bg-dark-800 text-gray-500 dark:text-dark-400">或</span>
+          </div>
+        </div>
+
+        <div class="mt-6">
+          <router-link
+            to="/auth/ldap"
+            class="w-full flex justify-center py-2 px-4 border border-gray-300 dark:border-dark-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-dark-300 bg-white dark:bg-dark-700 hover:bg-gray-50 dark:hover:bg-dark-600 transition-colors"
+          >
+            使用 LDAP 登录
+          </router-link>
+        </div>
+      </div>
     </div>
 
     <!-- Footer -->
@@ -207,6 +228,7 @@ const turnstileEnabled = ref<boolean>(false)
 const turnstileSiteKey = ref<string>('')
 const linuxdoOAuthEnabled = ref<boolean>(false)
 const passwordResetEnabled = ref<boolean>(false)
+const ldapEnabled = ref<boolean>(false)
 
 // Turnstile
 const turnstileRef = ref<InstanceType<typeof TurnstileWidget> | null>(null)
@@ -246,6 +268,7 @@ onMounted(async () => {
     turnstileSiteKey.value = settings.turnstile_site_key || ''
     linuxdoOAuthEnabled.value = settings.linuxdo_oauth_enabled
     passwordResetEnabled.value = settings.password_reset_enabled
+    ldapEnabled.value = settings.ldap_enabled
   } catch (error) {
     console.error('Failed to load public settings:', error)
   }

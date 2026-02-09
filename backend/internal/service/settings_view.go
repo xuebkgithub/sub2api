@@ -68,6 +68,7 @@ type PublicSettings struct {
 	PasswordResetEnabled  bool
 	InvitationCodeEnabled bool
 	TotpEnabled           bool // TOTP 双因素认证
+	LdapEnabled           bool // LDAP 认证
 	TurnstileEnabled      bool
 	TurnstileSiteKey      string
 	SiteName              string

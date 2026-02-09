@@ -66,6 +66,7 @@ type PublicSettings struct {
 	PasswordResetEnabled        bool   `json:"password_reset_enabled"`
 	InvitationCodeEnabled       bool   `json:"invitation_code_enabled"`
 	TotpEnabled                 bool   `json:"totp_enabled"` // TOTP 双因素认证
+	LdapEnabled                 bool   `json:"ldap_enabled"` // LDAP 认证
 	TurnstileEnabled            bool   `json:"turnstile_enabled"`
 	TurnstileSiteKey            string `json:"turnstile_site_key"`
 	SiteName                    string `json:"site_name"`

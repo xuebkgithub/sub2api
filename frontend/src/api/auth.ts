@@ -157,6 +157,27 @@ export async function getCurrentUser() {
 }
 
 /**
+ * LDAP login
+ * @param credentials - Username and password
+ * @returns Authentication response with token and user data
+ */
+export async function loginLdap(credentials: LdapLoginRequest): Promise<AuthResponse> {
+  const { data } = await apiClient.post<AuthResponse>('/auth/ldap/login', credentials)
+
+  // Store token and user data
+  setAuthToken(data.access_token)
+  if (data.refresh_token) {
+    setRefreshToken(data.refresh_token)
+  }
+  if (data.expires_in) {
+    setTokenExpiresAt(data.expires_in)
+  }
+  localStorage.setItem('auth_user', JSON.stringify(data.user))
+
+  return data
+}
+
+/**
  * User logout
  * Clears authentication token and user data from localStorage
  * Optionally revokes the refresh token on the server
@@ -174,6 +195,15 @@ export async function logout(): Promise<void> {
   }
 
   clearAuthToken()
+}
+
+/**
+ * LDAP login request
+ */
+export interface LdapLoginRequest {
+  username: string
+  password: string
+  turnstile_token?: string
 }
 
 /**
@@ -339,6 +369,7 @@ export const authAPI = {
   login,
   login2FA,
   isTotp2FARequired,
+  loginLdap,
   register,
   getCurrentUser,
   logout,

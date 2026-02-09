@@ -46,8 +46,35 @@ func Created(c *gin.Context, data any) {
 	})
 }
 
-// Error 返回错误响应
-func Error(c *gin.Context, statusCode int, message string) {
+// Error 返回错误响应，可接收 (statusCode, message) 或 error 参数
+func Error(c *gin.Context, args ...any) {
+	if len(args) == 1 {
+		if err, ok := args[0].(error); ok {
+			ErrorFrom(c, err)
+			return
+		}
+	}
+
+	statusCode := http.StatusInternalServerError
+	message := http.StatusText(statusCode)
+
+	if len(args) > 0 {
+		if code, ok := args[0].(int); ok && code > 0 {
+			statusCode = code
+			message = http.StatusText(statusCode)
+		}
+	}
+
+	if len(args) > 1 {
+		if msg, ok := args[1].(string); ok && msg != "" {
+			message = msg
+		}
+	}
+
+	writeErrorResponse(c, statusCode, message)
+}
+
+func writeErrorResponse(c *gin.Context, statusCode int, message string) {
 	c.JSON(statusCode, Response{
 		Code:     statusCode,
 		Message:  message,
