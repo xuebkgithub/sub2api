@@ -605,7 +605,8 @@ func newContractDeps(t *testing.T) *contractDeps {
 	redeemHandler := handler.NewRedeemHandler(redeemService)
 
 	settingRepo := newStubSettingRepo()
-	settingService := service.NewSettingService(settingRepo, cfg)
+	ldapConfigRepo := &stubLdapConfigRepo{}
+	settingService := service.NewSettingService(settingRepo, ldapConfigRepo, cfg)
 
 	adminService := service.NewAdminService(userRepo, groupRepo, &accountRepo, proxyRepo, apiKeyRepo, redeemRepo, nil, nil, nil, nil, nil)
 	authHandler := handler.NewAuthHandler(cfg, nil, userService, settingService, nil, redeemService, nil)
@@ -1741,6 +1742,29 @@ func (r *stubSettingRepo) GetAll(ctx context.Context) (map[string]string, error)
 func (r *stubSettingRepo) Delete(ctx context.Context, key string) error {
 	delete(r.all, key)
 	return nil
+}
+
+// stubLdapConfigRepo 是 LdapConfigRepository 的测试桩实现
+type stubLdapConfigRepo struct{}
+
+func (r *stubLdapConfigRepo) Get(ctx context.Context) (*service.LdapConfig, error) {
+	return nil, service.ErrLdapConfigNotFound
+}
+
+func (r *stubLdapConfigRepo) GetEnabled(ctx context.Context) (*service.LdapConfig, error) {
+	return nil, service.ErrLdapConfigNotFound
+}
+
+func (r *stubLdapConfigRepo) Create(ctx context.Context, config *service.LdapConfig) error {
+	return nil
+}
+
+func (r *stubLdapConfigRepo) Update(ctx context.Context, config *service.LdapConfig) error {
+	return nil
+}
+
+func (r *stubLdapConfigRepo) Exists(ctx context.Context) (bool, error) {
+	return false, nil
 }
 
 func paginateLogs(logs []service.UsageLog, params pagination.PaginationParams) []service.UsageLog {

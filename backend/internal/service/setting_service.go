@@ -31,11 +31,11 @@ type SettingRepository interface {
 
 // SettingService 系统设置服务
 type SettingService struct {
-	settingRepo     SettingRepository
-	ldapConfigRepo  LdapConfigRepository
-	cfg             *config.Config
-	onUpdate        func() // Callback when settings are updated (for cache invalidation)
-	version         string // Application version
+	settingRepo    SettingRepository
+	ldapConfigRepo LdapConfigRepository
+	cfg            *config.Config
+	onUpdate       func() // Callback when settings are updated (for cache invalidation)
+	version        string // Application version
 }
 
 // NewSettingService 创建系统设置服务实例

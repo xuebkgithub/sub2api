@@ -14,9 +14,9 @@ import (
 
 // LdapAuthHandler 处理 LDAP 登录请求
 type LdapAuthHandler struct {
-	ldapService  *service.LdapService
-	authService  *service.AuthService
-	totpService  *service.TotpService
+	ldapService    *service.LdapService
+	authService    *service.AuthService
+	totpService    *service.TotpService
 	settingService *service.SettingService
 }
 

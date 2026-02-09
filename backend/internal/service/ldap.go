@@ -344,7 +344,12 @@ func (s *LdapService) Authenticate(ctx context.Context, username, password strin
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	defer func() {
+		if closeErr := conn.Close(); closeErr != nil {
+			// 记录关闭错误，但不影响主流程
+			_ = closeErr
+		}
+	}()
 
 	// 4. 搜索用户 DN
 	userDN, userEmail, err := s.searchUser(conn, config, username, bindPassword)

@@ -51,6 +51,28 @@ func (s *settingRepoStub) Delete(ctx context.Context, key string) error {
 	panic("unexpected Delete call")
 }
 
+type ldapConfigRepoStub struct{}
+
+func (s *ldapConfigRepoStub) Get(ctx context.Context) (*LdapConfig, error) {
+	return nil, ErrLdapConfigNotFound
+}
+
+func (s *ldapConfigRepoStub) GetEnabled(ctx context.Context) (*LdapConfig, error) {
+	return nil, ErrLdapConfigNotFound
+}
+
+func (s *ldapConfigRepoStub) Create(ctx context.Context, config *LdapConfig) error {
+	return nil
+}
+
+func (s *ldapConfigRepoStub) Update(ctx context.Context, config *LdapConfig) error {
+	return nil
+}
+
+func (s *ldapConfigRepoStub) Exists(ctx context.Context) (bool, error) {
+	return false, nil
+}
+
 type emailCacheStub struct {
 	data *VerificationCodeData
 	err  error
@@ -105,7 +127,7 @@ func newAuthService(repo *userRepoStub, settings map[string]string, emailCache E
 
 	var settingService *SettingService
 	if settings != nil {
-		settingService = NewSettingService(&settingRepoStub{values: settings}, cfg)
+		settingService = NewSettingService(&settingRepoStub{values: settings}, &ldapConfigRepoStub{}, cfg)
 	}
 
 	var emailService *EmailService
