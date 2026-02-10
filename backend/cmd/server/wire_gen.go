@@ -70,14 +70,14 @@ func initializeApplication(buildInfo handler.BuildInfo) (*Application, error) {
 	subscriptionService := service.NewSubscriptionService(groupRepository, userSubscriptionRepository, billingCacheService)
 	redeemCache := repository.NewRedeemCache(redisClient)
 	redeemService := service.NewRedeemService(redeemCodeRepository, userRepository, subscriptionService, redeemCache, billingCacheService, client, apiKeyAuthCacheInvalidator)
+	ldapUserRepository := repository.NewLdapUserRepository(client)
 	secretEncryptor, err := repository.NewAESEncryptor(configConfig)
 	if err != nil {
 		return nil, err
 	}
 	totpCache := repository.NewTotpCache(redisClient)
-	totpService := service.NewTotpService(userRepository, secretEncryptor, totpCache, settingService, emailService, emailQueueService)
+	totpService := service.NewTotpService(userRepository, ldapUserRepository, secretEncryptor, totpCache, settingService, emailService, emailQueueService)
 	authHandler := handler.NewAuthHandler(configConfig, authService, userService, settingService, promoService, redeemService, totpService)
-	ldapUserRepository := repository.NewLdapUserRepository(client)
 	ldapService := service.NewLdapService(ldapConfigRepository, ldapUserRepository, userRepository, configConfig)
 	ldapAuthHandler := handler.NewLdapAuthHandler(ldapService, authService, totpService, settingService)
 	userHandler := handler.NewUserHandler(userService)

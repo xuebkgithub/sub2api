@@ -116,6 +116,7 @@ services:
       - LDAP_TLS_ENABLED=${LDAP_TLS_ENABLED:-false}
       - LDAP_TLS_SKIP_VERIFY=${LDAP_TLS_SKIP_VERIFY:-false}
       - LDAP_ENCRYPTION_KEY=${LDAP_ENCRYPTION_KEY:-test-encryption-key-32-chars!!}
+      - TOTP_ENCRYPTION_KEY=06068dcc2a982d0f0f73eeb5c21f5d5dfa5471cbb28eedff022380391acdbf4a
     depends_on:
       postgres:
         condition: service_healthy

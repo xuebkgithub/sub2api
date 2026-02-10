@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -89,6 +90,7 @@ const (
 // TotpService handles TOTP operations
 type TotpService struct {
 	userRepo          UserRepository
+	ldapUserRepo      LdapUserRepository
 	encryptor         SecretEncryptor
 	cache             TotpCache
 	settingService    *SettingService
@@ -99,6 +101,7 @@ type TotpService struct {
 // NewTotpService creates a new TOTP service
 func NewTotpService(
 	userRepo UserRepository,
+	ldapUserRepo LdapUserRepository,
 	encryptor SecretEncryptor,
 	cache TotpCache,
 	settingService *SettingService,
@@ -107,6 +110,7 @@ func NewTotpService(
 ) *TotpService {
 	return &TotpService{
 		userRepo:          userRepo,
+		ldapUserRepo:      ldapUserRepo,
 		encryptor:         encryptor,
 		cache:             cache,
 		settingService:    settingService,
@@ -149,22 +153,36 @@ func (s *TotpService) InitiateSetup(ctx context.Context, userID int64, emailCode
 		return nil, ErrTotpAlreadyEnabled
 	}
 
+	// Check if user is an LDAP user
+	isLdapUser := false
+	_, err = s.ldapUserRepo.GetByUserID(ctx, userID)
+	if err == nil {
+		// User has LDAP association
+		isLdapUser = true
+	} else if !errors.Is(err, ErrLdapUserNotFound) {
+		// Unexpected error
+		return nil, fmt.Errorf("check ldap user: %w", err)
+	}
+
 	// Verify identity based on email verification setting
-	if s.settingService.IsEmailVerifyEnabled(ctx) {
-		// Email verification enabled - verify email code
-		if emailCode == "" {
-			return nil, ErrVerifyCodeRequired
-		}
-		if err := s.emailService.VerifyCode(ctx, user.Email, emailCode); err != nil {
-			return nil, err
-		}
-	} else {
-		// Email verification disabled - verify password
-		if password == "" {
-			return nil, ErrPasswordRequired
-		}
-		if !user.CheckPassword(password) {
-			return nil, ErrPasswordIncorrect
+	// LDAP users skip password verification
+	if !isLdapUser {
+		if s.settingService.IsEmailVerifyEnabled(ctx) {
+			// Email verification enabled - verify email code
+			if emailCode == "" {
+				return nil, ErrVerifyCodeRequired
+			}
+			if err := s.emailService.VerifyCode(ctx, user.Email, emailCode); err != nil {
+				return nil, err
+			}
+		} else {
+			// Email verification disabled - verify password
+			if password == "" {
+				return nil, ErrPasswordRequired
+			}
+			if !user.CheckPassword(password) {
+				return nil, ErrPasswordIncorrect
+			}
 		}
 	}
 
