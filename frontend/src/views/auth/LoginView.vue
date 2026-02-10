@@ -187,7 +187,7 @@
 
   <!-- 2FA Modal -->
   <TotpLoginModal
-    v-if="show2FAModal"
+    v-model:show="show2FAModal"
     ref="totpModalRef"
     :temp-token="totpTempToken"
     :user-email-masked="totpUserEmailMasked"
