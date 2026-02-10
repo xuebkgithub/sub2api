@@ -315,6 +315,7 @@ export default {
     reloginRequired: '会话已过期，请重新登录。',
     turnstileExpired: '验证已过期，请重试',
     turnstileFailed: '验证失败，请重试',
+    turnstileLoadError: 'Turnstile 验证加载失败。请刷新页面或联系管理员。',
     completeVerification: '请完成验证',
     verifyYourEmail: '验证您的邮箱',
     sessionExpired: '会话已过期',

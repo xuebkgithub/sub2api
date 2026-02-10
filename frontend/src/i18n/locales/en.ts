@@ -315,6 +315,7 @@ export default {
     reloginRequired: 'Session expired. Please log in again.',
     turnstileExpired: 'Verification expired, please try again',
     turnstileFailed: 'Verification failed, please try again',
+    turnstileLoadError: 'Turnstile verification failed to load. Please refresh the page or contact the administrator.',
     completeVerification: 'Please complete the verification',
     verifyYourEmail: 'Verify Your Email',
     sessionExpired: 'Session expired',

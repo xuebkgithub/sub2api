@@ -105,21 +105,23 @@ services:
       - SECURITY_URL_ALLOWLIST_ALLOW_PRIVATE_HOSTS=${SECURITY_URL_ALLOWLIST_ALLOW_PRIVATE_HOSTS:-true}
 
       # =======================================================================
-      # LDAP Configuration (Optional)
+      # LDAP Configuration (for testing)
       # =======================================================================
-      - LDAP_SERVER_URL=${LDAP_SERVER_URL:-}
-      - LDAP_BIND_DN=${LDAP_BIND_DN:-}
-      - LDAP_BIND_PASSWORD=${LDAP_BIND_PASSWORD:-}
-      - LDAP_BASE_DN=${LDAP_BASE_DN:-}
+      - LDAP_SERVER_URL=${LDAP_SERVER_URL:-ldap://openldap:389}
+      - LDAP_BIND_DN=${LDAP_BIND_DN:-cn=admin,dc=sub2api,dc=local}
+      - LDAP_BIND_PASSWORD=${LDAP_BIND_PASSWORD:-admin123}
+      - LDAP_BASE_DN=${LDAP_BASE_DN:-ou=users,dc=sub2api,dc=local}
       - LDAP_USER_FILTER=${LDAP_USER_FILTER:-(uid=%s)}
-      - LDAP_ENABLED=${LDAP_ENABLED:-false}
+      - LDAP_ENABLED=${LDAP_ENABLED:-true}
       - LDAP_TLS_ENABLED=${LDAP_TLS_ENABLED:-false}
       - LDAP_TLS_SKIP_VERIFY=${LDAP_TLS_SKIP_VERIFY:-false}
-      - LDAP_ENCRYPTION_KEY=${LDAP_ENCRYPTION_KEY:-}
+      - LDAP_ENCRYPTION_KEY=${LDAP_ENCRYPTION_KEY:-test-encryption-key-32-chars!!}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      openldap:
         condition: service_healthy
     networks:
       - sub2api-network
@@ -191,6 +193,33 @@ services:
       retries: 5
       start_period: 5s
 
+  # ===========================================================================
+  # OpenLDAP Server (for LDAP testing)
+  # ===========================================================================
+  openldap:
+    image: osixia/openldap:1.5.0
+    container_name: sub2api-openldap
+    restart: unless-stopped
+    environment:
+      - LDAP_ORGANISATION=Sub2API Test
+      - LDAP_DOMAIN=sub2api.local
+      - LDAP_ADMIN_PASSWORD=admin123
+      - LDAP_CONFIG_PASSWORD=config123
+      - LDAP_RFC2307BIS_SCHEMA=true
+      - LDAP_REMOVE_CONFIG_AFTER_SETUP=true
+      - LDAP_TLS=false
+    volumes:
+      - ldap_data:/var/lib/ldap
+      - ldap_config:/etc/ldap/slapd.d
+    networks:
+      - sub2api-network
+    healthcheck:
+      test: ["CMD", "ldapsearch", "-x", "-H", "ldap://localhost", "-b", "dc=sub2api,dc=local", "-D", "cn=admin,dc=sub2api,dc=local", "-w", "admin123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
 # =============================================================================
 # Volumes
 # =============================================================================
@@ -200,6 +229,10 @@ volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  ldap_data:
+    driver: local
+  ldap_config:
     driver: local
 
 # =============================================================================

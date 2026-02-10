@@ -159,21 +159,12 @@ export async function getCurrentUser() {
 /**
  * LDAP login
  * @param credentials - Username and password
- * @returns Authentication response with token and user data
+ * @returns Login response (can be full auth or 2FA required)
  */
-export async function loginLdap(credentials: LdapLoginRequest): Promise<AuthResponse> {
-  const { data } = await apiClient.post<AuthResponse>('/auth/ldap/login', credentials)
+export async function loginLdap(credentials: LdapLoginRequest): Promise<LoginResponse> {
+  const { data } = await apiClient.post<LoginResponse>('/auth/ldap/login', credentials)
 
-  // Store token and user data
-  setAuthToken(data.access_token)
-  if (data.refresh_token) {
-    setRefreshToken(data.refresh_token)
-  }
-  if (data.expires_in) {
-    setTokenExpiresAt(data.expires_in)
-  }
-  localStorage.setItem('auth_user', JSON.stringify(data.user))
-
+  // 不再自动存储 token，由调用方处理
   return data
 }
 

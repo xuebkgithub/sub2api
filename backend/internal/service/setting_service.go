@@ -157,6 +157,7 @@ func (s *SettingService) GetPublicSettingsForInjection(ctx context.Context) (any
 		PasswordResetEnabled        bool   `json:"password_reset_enabled"`
 		InvitationCodeEnabled       bool   `json:"invitation_code_enabled"`
 		TotpEnabled                 bool   `json:"totp_enabled"`
+		LdapEnabled                 bool   `json:"ldap_enabled"`
 		TurnstileEnabled            bool   `json:"turnstile_enabled"`
 		TurnstileSiteKey            string `json:"turnstile_site_key,omitempty"`
 		SiteName                    string `json:"site_name"`
@@ -178,6 +179,7 @@ func (s *SettingService) GetPublicSettingsForInjection(ctx context.Context) (any
 		PasswordResetEnabled:        settings.PasswordResetEnabled,
 		InvitationCodeEnabled:       settings.InvitationCodeEnabled,
 		TotpEnabled:                 settings.TotpEnabled,
+		LdapEnabled:                 settings.LdapEnabled,
 		TurnstileEnabled:            settings.TurnstileEnabled,
 		TurnstileSiteKey:            settings.TurnstileSiteKey,
 		SiteName:                    settings.SiteName,

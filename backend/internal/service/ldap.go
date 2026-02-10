@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/db"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/go-ldap/ldap/v3"
 	"golang.org/x/crypto/bcrypt"
@@ -32,6 +33,9 @@ var (
 	ErrLdapInvalidCredentials   = infraerrors.Unauthorized("LDAP_INVALID_CREDENTIALS", "invalid ldap credentials")
 	ErrLdapEncryptionKeyNotSet  = infraerrors.InternalServer("LDAP_ENCRYPTION_KEY_NOT_SET", "ldap encryption key not configured")
 	ErrLdapInvalidEncryptionKey = infraerrors.InternalServer("LDAP_INVALID_ENCRYPTION_KEY", "invalid ldap encryption key format")
+	ErrLdapMultipleUsersFound   = infraerrors.BadRequest("LDAP_MULTIPLE_USERS_FOUND", "LDAP search returned multiple users. Please contact administrator to fix LDAP filter configuration.")
+	ErrLdapUserEmailRequired    = infraerrors.BadRequest("LDAP_USER_EMAIL_REQUIRED", "LDAP user must have email attribute (mail or userPrincipalName). Please contact administrator.")
+	ErrConcurrentConflict       = errors.New("concurrent conflict detected")
 )
 
 type LdapConfig struct {
@@ -74,6 +78,8 @@ type LdapUserRepository interface {
 	GetByUserID(ctx context.Context, userID int64) (*LdapUser, error)
 	UpdateLastSync(ctx context.Context, id int64) error
 	ExistsByUsername(ctx context.Context, username string) (bool, error)
+	GetByEmailWithUser(ctx context.Context, email string) (*LdapUser, error)
+	UpdateUsernameAndDN(ctx context.Context, id int64, username, dn string) error
 }
 
 // LdapService 处理 LDAP 认证操作
@@ -256,11 +262,26 @@ func (s *LdapService) searchUser(
 		return "", "", ErrLdapUserNotFound
 	}
 
+	if len(result.Entries) > 1 {
+		slog.Warn("ldap_multiple_users_found",
+			"username", username,
+			"count", len(result.Entries),
+			"filter", filter)
+		return "", "", ErrLdapMultipleUsersFound
+	}
+
 	entry := result.Entries[0]
 	userDN := entry.DN
 	userEmail := entry.GetAttributeValue("mail")
 	if userEmail == "" {
 		userEmail = entry.GetAttributeValue("userPrincipalName")
+	}
+
+	if userEmail == "" {
+		slog.Warn("ldap_user_email_required",
+			"username", username,
+			"dn", maskDN(userDN))
+		return "", "", ErrLdapUserEmailRequired
 	}
 
 	slog.Debug("ldap_user_found",
@@ -371,57 +392,100 @@ func (s *LdapService) Authenticate(ctx context.Context, username, password strin
 	return user, nil
 }
 
-// findOrCreateUser 查找或创建本地用户
+// findOrCreateUser 查找或创建本地用户（支持用户名变更和并发冲突重试）
 func (s *LdapService) findOrCreateUser(
 	ctx context.Context,
 	username, userDN, userEmail string,
 ) (*User, error) {
-	// 1. 尝试通过 LDAP username 查找
-	ldapUser, err := s.ldapUserRepo.GetByUsername(ctx, username)
-	if err == nil {
-		// 找到关联，返回本地用户
-		return ldapUser.User, nil
-	}
+	return withRetry(ctx, 3, func(ctx context.Context) (*User, error) {
+		// 1. 尝试通过 LDAP username 查找
+		ldapUser, err := s.ldapUserRepo.GetByUsername(ctx, username)
+		if err == nil {
+			// 找到关联，返回本地用户
+			return ldapUser.User, nil
+		}
 
-	if !errors.Is(err, ErrLdapUserNotFound) {
-		return nil, err
-	}
-
-	// 2. 尝试通过邮箱查找本地用户
-	user, err := s.userRepo.GetByEmail(ctx, userEmail)
-	if err != nil && !errors.Is(err, ErrUserNotFound) {
-		return nil, err
-	}
-
-	// 3. 如果用户不存在，创建新用户
-	if user == nil {
-		user, err = s.createLdapUser(ctx, username, userEmail)
-		if err != nil {
+		if !errors.Is(err, ErrLdapUserNotFound) {
 			return nil, err
 		}
-	}
 
-	// 4. 创建 LDAP 关联
-	ldapUserEntity := &LdapUser{
-		UserID:       user.ID,
-		LdapUsername: username,
-		LdapDn:       userDN,
-		LastSyncAt:   time.Now(),
-	}
+		// 2. 尝试通过邮箱查找 LDAP 关联（用户名可能变更）
+		ldapUser, err = s.ldapUserRepo.GetByEmailWithUser(ctx, userEmail)
+		if err == nil {
+			// 找到关联，检测用户名变更
+			if ldapUser.LdapUsername != username {
+				// 用户名变更，更新
+				slog.Info("ldap_username_changed",
+					"user_id", ldapUser.UserID,
+					"old_username", ldapUser.LdapUsername,
+					"new_username", username,
+					"email", userEmail)
 
-	if err := s.ldapUserRepo.Create(ctx, ldapUserEntity); err != nil {
-		slog.Error("ldap_user_association_failed",
+				// 更新用户名和 DN
+				err = s.ldapUserRepo.UpdateUsernameAndDN(ctx, ldapUser.ID, username, userDN)
+				if err != nil {
+					// 检查是否是唯一约束冲突
+					if db.IsUniqueConstraintViolation(err) {
+						return nil, ErrConcurrentConflict
+					}
+					return nil, err
+				}
+
+				// 同时更新本地用户的 username
+				ldapUser.User.Username = username
+				err = s.userRepo.Update(ctx, ldapUser.User)
+				if err != nil {
+					return nil, fmt.Errorf("failed to update user username: %w", err)
+				}
+			}
+			return ldapUser.User, nil
+		}
+
+		if !errors.Is(err, ErrLdapUserNotFound) {
+			return nil, err
+		}
+
+		// 3. 都找不到，尝试通过邮箱查找本地用户
+		user, err := s.userRepo.GetByEmail(ctx, userEmail)
+		if err != nil && !errors.Is(err, ErrUserNotFound) {
+			return nil, err
+		}
+
+		// 4. 如果用户不存在，创建新用户
+		if user == nil {
+			user, err = s.createLdapUser(ctx, username, userEmail)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		// 5. 创建 LDAP 关联
+		ldapUserEntity := &LdapUser{
+			UserID:       user.ID,
+			LdapUsername: username,
+			LdapDn:       userDN,
+			LastSyncAt:   time.Now(),
+		}
+
+		if err := s.ldapUserRepo.Create(ctx, ldapUserEntity); err != nil {
+			// 检查是否是唯一约束冲突
+			if db.IsUniqueConstraintViolation(err) {
+				return nil, ErrConcurrentConflict
+			}
+
+			slog.Error("ldap_user_association_failed",
+				"user_id", user.ID,
+				"username", username,
+				"error", err)
+			return nil, err
+		}
+
+		slog.Info("ldap_user_associated",
 			"user_id", user.ID,
-			"username", username,
-			"error", err)
-		return nil, err
-	}
+			"username", username)
 
-	slog.Info("ldap_user_associated",
-		"user_id", user.ID,
-		"username", username)
-
-	return user, nil
+		return user, nil
+	})
 }
 
 // createLdapUser 创建 LDAP 用户（遵循 C14）
@@ -577,4 +641,30 @@ func getEnvBool(key string, defaultValue bool) bool {
 		return defaultValue
 	}
 	return value == "true" || value == "1" || value == "yes"
+}
+
+// withRetry 重试辅助函数
+func withRetry(ctx context.Context, maxRetries int, fn func(context.Context) (*User, error)) (*User, error) {
+	retryDelays := []time.Duration{10 * time.Millisecond, 50 * time.Millisecond, 100 * time.Millisecond}
+
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		user, err := fn(ctx)
+		if err == nil {
+			return user, nil
+		}
+
+		// 只重试并发冲突错误
+		if !errors.Is(err, ErrConcurrentConflict) {
+			return nil, err
+		}
+
+		if attempt < maxRetries {
+			slog.Debug("retrying_after_concurrent_conflict",
+				"attempt", attempt+1,
+				"delay_ms", retryDelays[attempt].Milliseconds())
+			time.Sleep(retryDelays[attempt])
+		}
+	}
+
+	return nil, ErrConcurrentConflict
 }

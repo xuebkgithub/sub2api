@@ -1,0 +1,81 @@
+# =============================================================================
+# LDAP Test Users for Sub2API Testing
+# =============================================================================
+# This file defines test users for LDAP authentication testing.
+# It will be imported into the OpenLDAP server on startup.
+#
+# Organization Structure:
+#   dc=sub2api,dc=local
+#   └── ou=users
+#       ├── uid=testuser1
+#       ├── uid=testuser2
+#       └── uid=testuser3
+# =============================================================================
+
+# Create organizational unit for users
+dn: ou=users,dc=sub2api,dc=local
+objectClass: organizationalUnit
+ou: users
+
+# Test User 1 - Standard user with email
+dn: uid=testuser1,ou=users,dc=sub2api,dc=local
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+uid: testuser1
+cn: Test User One
+sn: User
+givenName: Test
+mail: testuser1@sub2api.local
+uidNumber: 10001
+gidNumber: 10001
+homeDirectory: /home/testuser1
+loginShell: /bin/bash
+userPassword: password123
+
+# Test User 2 - User without email (for empty email testing)
+dn: uid=testuser2,ou=users,dc=sub2api,dc=local
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+uid: testuser2
+cn: Test User Two
+sn: User
+givenName: Test
+uidNumber: 10002
+gidNumber: 10002
+homeDirectory: /home/testuser2
+loginShell: /bin/bash
+userPassword: password123
+
+# Test User 3 - User with email for concurrent testing
+dn: uid=testuser3,ou=users,dc=sub2api,dc=local
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+uid: testuser3
+cn: Test User Three
+sn: User
+givenName: Test
+mail: testuser3@sub2api.local
+uidNumber: 10003
+gidNumber: 10003
+homeDirectory: /home/testuser3
+loginShell: /bin/bash
+userPassword: password123
+
+# Test User 4 - User for username change testing
+dn: uid=oldusername,ou=users,dc=sub2api,dc=local
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+uid: oldusername
+cn: Test User Four
+sn: User
+givenName: Test
+mail: testuser4@sub2api.local
+uidNumber: 10004
+gidNumber: 10004
+homeDirectory: /home/oldusername
+loginShell: /bin/bash
+userPassword: password123

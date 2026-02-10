@@ -13,6 +13,36 @@
 
       <!-- Login Form -->
       <form class="mt-8 space-y-6" @submit.prevent="handleSubmit">
+        <!-- Turnstile Widget -->
+        <TurnstileWidget
+          v-if="turnstileEnabled"
+          ref="turnstileRef"
+          :site-key="turnstileSiteKey"
+          @verify="onTurnstileVerify"
+          @expire="onTurnstileExpire"
+          @error="onTurnstileError"
+        />
+
+        <!-- Turnstile 加载错误提示 -->
+        <div v-if="turnstileLoadError" class="rounded-md bg-yellow-50 p-4">
+          <div class="flex">
+            <div class="ml-3">
+              <h3 class="text-sm font-medium text-yellow-800">
+                {{ $t('auth.turnstileLoadError') }}
+              </h3>
+              <div class="mt-2">
+                <button
+                  type="button"
+                  @click="reloadTurnstile"
+                  class="text-sm font-medium text-yellow-800 hover:text-yellow-700 underline"
+                >
+                  {{ $t('common.refresh') }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="rounded-md shadow-sm -space-y-px">
           <!-- Username Input -->
           <div>
@@ -58,7 +88,7 @@
         <div>
           <button
             type="submit"
-            :disabled="loading"
+            :disabled="loading || (turnstileEnabled && !turnstileToken)"
             class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
           >
             {{ loading ? $t('auth.ldap.signingIn') : $t('auth.ldap.signIn') }}
@@ -76,16 +106,29 @@
         </div>
       </form>
     </div>
+
+    <!-- 2FA Modal -->
+    <TotpLoginModal
+      v-model:show="showTotpModal"
+      :temp-token="tempToken"
+      :user-email-masked="userEmailMasked"
+      @verify="handle2FAVerify"
+      @cancel="handle2FACancel"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
+import TurnstileWidget from '@/components/TurnstileWidget.vue'
+import TotpLoginModal from '@/components/auth/TotpLoginModal.vue'
+import { getPublicSettings, isTotp2FARequired } from '@/api/auth'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 const { t } = useI18n()
 
@@ -97,22 +140,95 @@ const form = ref({
 const loading = ref(false)
 const error = ref('')
 
+// Turnstile 相关状态
+const turnstileEnabled = ref(false)
+const turnstileSiteKey = ref('')
+const turnstileToken = ref('')
+const turnstileRef = ref<InstanceType<typeof TurnstileWidget>>()
+const turnstileLoadError = ref(false)
+
+// 2FA 相关状态
+const showTotpModal = ref(false)
+const tempToken = ref('')
+const userEmailMasked = ref('')
+
+// 加载公共配置
+onMounted(async () => {
+  try {
+    const settings = await getPublicSettings()
+    turnstileEnabled.value = settings.turnstile_enabled
+    turnstileSiteKey.value = settings.turnstile_site_key || ''
+  } catch (err) {
+    console.error('Failed to load public settings:', err)
+  }
+})
+
+// Turnstile 事件处理
+function onTurnstileVerify(token: string) {
+  turnstileToken.value = token
+  turnstileLoadError.value = false
+}
+
+function onTurnstileExpire() {
+  turnstileToken.value = ''
+}
+
+function onTurnstileError() {
+  console.error('Turnstile error: Failed to load or verify')
+  turnstileLoadError.value = true
+  turnstileToken.value = ''
+}
+
+function reloadTurnstile() {
+  turnstileLoadError.value = false
+  turnstileRef.value?.reset()
+}
+
 async function handleSubmit() {
   error.value = ''
   loading.value = true
 
   try {
-    await authStore.loginLdap(
+    const response = await authStore.loginLdap(
       form.value.username,
-      form.value.password
+      form.value.password,
+      turnstileToken.value // 传递 Turnstile token
     )
 
-    // Login successful, redirect to home
-    router.push('/')
+    // 检查是否需要 2FA
+    if (isTotp2FARequired(response)) {
+      tempToken.value = response.temp_token!
+      userEmailMasked.value = response.user_email_masked!
+      showTotpModal.value = true
+      return
+    }
+
+    // 直接登录成功，跳转
+    router.push((route.query.redirect as string) || '/')
+  } catch (err: any) {
+    error.value = err.response?.data?.message || t('auth.ldap.loginFailed')
+    turnstileRef.value?.reset() // 重置 Turnstile
+  } finally {
+    loading.value = false
+  }
+}
+
+async function handle2FAVerify(totpCode: string) {
+  try {
+    loading.value = true
+    await authStore.login2FA(tempToken.value, totpCode)
+    showTotpModal.value = false
+    router.push((route.query.redirect as string) || '/')
   } catch (err: any) {
     error.value = err.response?.data?.message || t('auth.ldap.loginFailed')
   } finally {
     loading.value = false
   }
+}
+
+function handle2FACancel() {
+  showTotpModal.value = false
+  tempToken.value = ''
+  userEmailMasked.value = ''
 }
 </script>
