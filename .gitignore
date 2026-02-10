@@ -33,6 +33,7 @@ backend/.gocache/
 node_modules/
 frontend/node_modules/
 frontend/dist/
+frontend/.pnpm-store/
 *.local
 *.tsbuildinfo
 vite.config.d.ts

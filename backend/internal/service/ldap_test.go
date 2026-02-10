@@ -60,6 +60,19 @@ func (s *ldapUserRepoStub) UpdateUsernameAndDN(ctx context.Context, id int64, us
 	panic("unexpected UpdateUsernameAndDN call")
 }
 
+// userRepoStubWithUpdate 扩展 userRepoStub 以支持 Update 方法
+type userRepoStubWithUpdate struct {
+	*userRepoStub
+	updateFunc func(ctx context.Context, user *User) error
+}
+
+func (s *userRepoStubWithUpdate) Update(ctx context.Context, user *User) error {
+	if s.updateFunc != nil {
+		return s.updateFunc(ctx, user)
+	}
+	panic("unexpected Update call")
+}
+
 
 // TestLdapErrorDefinitions 测试 LDAP 错误定义
 func TestLdapErrorDefinitions(t *testing.T) {
@@ -218,7 +231,16 @@ func TestFindOrCreateUser_UsernameChange(t *testing.T) {
 			},
 		}
 
-		userRepo := &userRepoStub{}
+		// 创建支持 Update 的 userRepo stub
+		userRepo := &userRepoStubWithUpdate{
+			userRepoStub: &userRepoStub{},
+			updateFunc: func(ctx context.Context, user *User) error {
+				// 验证更新的用户
+				assert.Equal(t, existingUser.ID, user.ID)
+				assert.Equal(t, newUsername, user.Username)
+				return nil
+			},
+		}
 
 		// 创建 service
 		service := &LdapService{
