@@ -1250,23 +1250,6 @@ func needForceCacheBilling(hasBoundSession bool, failoverErr *service.UpstreamFa
 	return hasBoundSession || (failoverErr != nil && failoverErr.ForceCacheBilling)
 }
 
-const (
-	// maxSameAccountRetries 同账号重试次数上限（针对 RetryableOnSameAccount 错误）
-	maxSameAccountRetries = 2
-	// sameAccountRetryDelay 同账号重试间隔
-	sameAccountRetryDelay = 500 * time.Millisecond
-)
-
-// sleepSameAccountRetryDelay 同账号重试固定延时，返回 false 表示 context 已取消。
-func sleepSameAccountRetryDelay(ctx context.Context) bool {
-	select {
-	case <-ctx.Done():
-		return false
-	case <-time.After(sameAccountRetryDelay):
-		return true
-	}
-}
-
 // sleepFailoverDelay 账号切换线性递增延时：第1次0s、第2次1s、第3次2s…
 // 返回 false 表示 context 已取消。
 func sleepFailoverDelay(ctx context.Context, switchCount int) bool {
@@ -1302,4 +1285,3 @@ func sleepAntigravitySingleAccountBackoff(ctx context.Context, retryCount int) b
 		return true
 	}
 }
-
