@@ -114,7 +114,7 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 
 	setOpsRequestContext(c, "", false, body)
 
-	parsedReq, err := service.ParseGatewayRequest(body)
+	parsedReq, err := service.ParseGatewayRequest(body, domain.PlatformAnthropic)
 	if err != nil {
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to parse request body")
 		return
@@ -934,7 +934,7 @@ func (h *GatewayHandler) CountTokens(c *gin.Context) {
 
 	setOpsRequestContext(c, "", false, body)
 
-	parsedReq, err := service.ParseGatewayRequest(body)
+	parsedReq, err := service.ParseGatewayRequest(body, domain.PlatformAnthropic)
 	if err != nil {
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to parse request body")
 		return
@@ -1242,3 +1242,63 @@ func billingErrorDetails(err error) (status int, code, message string) {
 	}
 	return http.StatusForbidden, "billing_error", msg
 }
+
+// needForceCacheBilling 判断 failover 时是否需要强制缓存计费
+// 粘性会话切换账号、或上游明确标记时，将 input_tokens 转为 cache_read 计费
+func needForceCacheBilling(hasBoundSession bool, failoverErr *service.UpstreamFailoverError) bool {
+	return hasBoundSession || (failoverErr != nil && failoverErr.ForceCacheBilling)
+}
+
+const (
+	// maxSameAccountRetries 同账号重试次数上限（针对 RetryableOnSameAccount 错误）
+	maxSameAccountRetries = 2
+	// sameAccountRetryDelay 同账号重试间隔
+	sameAccountRetryDelay = 500 * time.Millisecond
+)
+
+// sleepSameAccountRetryDelay 同账号重试固定延时，返回 false 表示 context 已取消。
+func sleepSameAccountRetryDelay(ctx context.Context) bool {
+	select {
+	case <-ctx.Done():
+		return false
+	case <-time.After(sameAccountRetryDelay):
+		return true
+	}
+}
+
+// sleepFailoverDelay 账号切换线性递增延时：第1次0s、第2次1s、第3次2s…
+// 返回 false 表示 context 已取消。
+func sleepFailoverDelay(ctx context.Context, switchCount int) bool {
+	delay := time.Duration(switchCount-1) * time.Second
+	if delay <= 0 {
+		return true
+	}
+	select {
+	case <-ctx.Done():
+		return false
+	case <-time.After(delay):
+		return true
+	}
+}
+
+// sleepAntigravitySingleAccountBackoff Antigravity 平台单账号分组的 503 退避重试延时。
+// 当分组内只有一个可用账号且上游返回 503（MODEL_CAPACITY_EXHAUSTED）时使用，
+// 采用短固定延时策略。Service 层在 SingleAccountRetry 模式下已经做了充分的原地重试
+// （最多 3 次、总等待 30s），所以 Handler 层的退避只需短暂等待即可。
+// 返回 false 表示 context 已取消。
+func sleepAntigravitySingleAccountBackoff(ctx context.Context, retryCount int) bool {
+	// 固定短延时：2s
+	// Service 层已经在原地等待了足够长的时间（retryDelay × 重试次数），
+	// Handler 层只需短暂间隔后重新进入 Service 层即可。
+	const delay = 2 * time.Second
+
+	log.Printf("Antigravity single-account 503 backoff: waiting %v before retry (attempt %d)", delay, retryCount)
+
+	select {
+	case <-ctx.Done():
+		return false
+	case <-time.After(delay):
+		return true
+	}
+}
+
