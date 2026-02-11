@@ -98,7 +98,7 @@
         <!-- Back Link -->
         <div class="text-center">
           <router-link
-            to="/auth/login"
+            to="/login"
             class="font-medium text-indigo-600 hover:text-indigo-500"
           >
             {{ $t('auth.ldap.backToEmailLogin') }}

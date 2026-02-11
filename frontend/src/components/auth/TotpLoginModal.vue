@@ -70,7 +70,7 @@
 import { ref, watch, nextTick, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-defineProps<{
+const props = defineProps<{
   show: boolean
   tempToken: string
   userEmailMasked?: string
@@ -95,6 +95,24 @@ watch(
   (newCode) => {
     if (newCode.length === 6 && !verifying.value) {
       emit('verify', newCode)
+    }
+  }
+)
+
+// 监听模态框关闭，自动重置状态
+watch(
+  () => props.show,
+  (newShow) => {
+    if (!newShow) {
+      // 模态框关闭时重置所有状态
+      code.value = ['', '', '', '', '', '']
+      error.value = ''
+      verifying.value = false
+
+      // 清空输入框 DOM 值
+      inputRefs.value.forEach(input => {
+        if (input) input.value = ''
+      })
     }
   }
 )

@@ -367,7 +367,8 @@ export default {
       signIn: 'Sign In',
       signingIn: 'Signing in...',
       loginFailed: 'Login failed, please check your username and password',
-      backToEmailLogin: 'Back to Email Login'
+      backToEmailLogin: 'Back to Email Login',
+      and: 'AND'
     },
     // Forgot password
     forgotPassword: 'Forgot password?',

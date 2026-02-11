@@ -156,7 +156,7 @@
             <div class="w-full border-t border-gray-300 dark:border-dark-600"></div>
           </div>
           <div class="relative flex justify-center text-sm">
-            <span class="px-2 bg-white dark:bg-dark-800 text-gray-500 dark:text-dark-400">或</span>
+            <span class="px-2 bg-white dark:bg-dark-800 text-gray-500 dark:text-dark-400">{{ $t('auth.ldap.and') }}</span>
           </div>
         </div>
 
@@ -165,7 +165,7 @@
             to="/auth/ldap"
             class="w-full flex justify-center py-2 px-4 border border-gray-300 dark:border-dark-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-dark-300 bg-white dark:bg-dark-700 hover:bg-gray-50 dark:hover:bg-dark-600 transition-colors"
           >
-            使用 LDAP 登录
+            {{ $t('auth.ldap.title') }}
           </router-link>
         </div>
       </div>

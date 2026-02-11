@@ -367,7 +367,8 @@ export default {
       signIn: '登录',
       signingIn: '登录中...',
       loginFailed: '登录失败，请检查用户名和密码',
-      backToEmailLogin: '返回邮箱登录'
+      backToEmailLogin: '返回邮箱登录',
+      and: '或'
     },
     // 忘记密码
     forgotPassword: '忘记密码？',
