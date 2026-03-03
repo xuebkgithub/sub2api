@@ -114,43 +114,32 @@ services:
       # =======================================================================
       # Allow private IP addresses for CRS sync (for internal deployments)
       - SECURITY_URL_ALLOWLIST_ALLOW_PRIVATE_HOSTS=${SECURITY_URL_ALLOWLIST_ALLOW_PRIVATE_HOSTS:-true}
+      # =======================================================================
       # LDAP Authentication Configuration (LDAP 认证配置)
+      # =======================================================================
       # Enable LDAP authentication for enterprise users
-#      # 为企业用户启用 LDAP 认证
-#      - LDAP_ENABLED=true
-#      # LDAP server hostname or IP address
-#      # LDAP 服务器主机名或 IP 地址
-#      - LDAP_HOST=***REMOVED***
-#      # LDAP server port
-#      # LDAP 服务器端口
-#      # Standard ports: 389 (LDAP), 636 (LDAPS)
-#      - LDAP_PORT=389
-#      # - LDAP_USE_TLS: Use LDAPS (LDAP over SSL/TLS, usually port 636)
-#      # - LDAP_USE_START_TLS: Use StartTLS to upgrade connection (usually port 389)
-#      - LDAP_USE_TLS=false
-#      - LDAP_USE_START_TLS=false
-#      - LDAP_SKIP_TLS_VERIFY=false
-#      - LDAP_BIND_DN=cn=root,dc=example,dc=com
-#      - LDAP_BIND_PASSWORD=***REMOVED***
-#      - LDAP_BASE_DN=ou=People,dc=example,dc=com
-#      - LDAP_USER_FILTER=(&(objectClass=inetOrgPerson)(uid=%s))
-#      # Map LDAP attributes to application fields
-#      - LDAP_ATTRIBUTES_USERNAME=uid
-#      - LDAP_ATTRIBUTES_EMAIL=mail
-#      - LDAP_ATTRIBUTES_DISPLAY_NAME=cn
-      # LDAP 认证配置
-      - LDAP_ENABLED=true
-      # 注意：必须是完整的 URL 格式（ldap://host:port 或 ldaps://host:port）
-      - LDAP_SERVER_URL=ldap://***REMOVED***:389
-      - LDAP_BIND_DN=cn=root,dc=example,dc=com
-      - LDAP_BIND_PASSWORD=***REMOVED***
-      - LDAP_BASE_DN=ou=People,dc=example,dc=com
-      - LDAP_USER_FILTER=(&(objectClass=inetOrgPerson)(uid=%s))
+      # 为企业用户启用 LDAP 认证
+      - LDAP_ENABLED=${LDAP_ENABLED:-false}
+      # LDAP server URL (完整的 URL 格式：ldap://host:port 或 ldaps://host:port)
+      # Example: ldap://ldap.example.com:389 或 ldaps://ldap.example.com:636
+      - LDAP_SERVER_URL=${LDAP_SERVER_URL:-}
+      # LDAP bind DN (用于连接 LDAP 服务器的管理员 DN)
+      # Example: cn=admin,dc=example,dc=com
+      - LDAP_BIND_DN=${LDAP_BIND_DN:-}
+      # LDAP bind password (管理员密码，请通过环境变量设置)
+      - LDAP_BIND_PASSWORD=${LDAP_BIND_PASSWORD:-}
+      # LDAP base DN (搜索用户的基础 DN)
+      # Example: ou=People,dc=example,dc=com
+      - LDAP_BASE_DN=${LDAP_BASE_DN:-}
+      # LDAP user filter (用户搜索过滤器，%s 会被替换为用户名)
+      # Example: (&(objectClass=inetOrgPerson)(uid=%s))
+      - LDAP_USER_FILTER=${LDAP_USER_FILTER:-(&(objectClass=inetOrgPerson)(uid=%s))}
       # TLS 配置（可选）
-      - LDAP_TLS_ENABLED=false
-      - LDAP_TLS_SKIP_VERIFY=false
+      - LDAP_TLS_ENABLED=${LDAP_TLS_ENABLED:-false}
+      - LDAP_TLS_SKIP_VERIFY=${LDAP_TLS_SKIP_VERIFY:-false}
       # 加密密钥（必需！32字节的十六进制字符串，64个字符）
-      - LDAP_ENCRYPTION_KEY=***REMOVED***
+      # 请通过环境变量设置，不要在此文件中硬编码
+      - LDAP_ENCRYPTION_KEY=${LDAP_ENCRYPTION_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
